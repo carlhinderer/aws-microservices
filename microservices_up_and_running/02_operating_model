@@ -1,0 +1,12 @@
+------------------------------------------------------------------
+| CHAPTER 2 - DESIGNING AN OPERATING MODEL                       |
+------------------------------------------------------------------
+
+- Teams and People
+
+    - In order to get value out of microservices, you need a team that can make decisions quickly.
+
+
+    - MS teams should be small (5-8 people).  Larger teams introduce larger communication overhead.
+        This means we will have more teams, so we need to be careful in how we design the rest of the 
+        system.  It also means we will have fewer specialists.

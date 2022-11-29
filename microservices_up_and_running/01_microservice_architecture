@@ -1,0 +1,146 @@
+------------------------------------------------------------------
+| CHAPTER 1 - TOWARDS A MICROSERVICE ARCHITECTURE                |
+------------------------------------------------------------------
+
+- Tools Used in This Book
+
+    - Docker
+    - Redis
+    - MySQL
+    - GitHub
+    - Github Actions
+    - Terraform
+    - AWS
+    - kubectl
+    - Helm
+    - ArgoCD
+
+
+
+- Lewis and Fowler's 9 Characteristics for Microservice Architecture
+
+    1. Componentization via services
+
+         - Components = a unit of software that is independently replaceable and upgradeable
+         - Service = components that run in separate processes and communicate over a network
+         - Services are independently deployable
+         - Services require an explicit published interface
+
+
+    2. Organized around business capabilities
+
+         - Organize around business capabilities rather than technology areas
+
+
+    3. Products not projects
+
+         - Traditional software efforts used a project model where a piece of software is completed
+         - Microservice teams own a product over its full lifetime
+
+
+    4. Smart endpoints and dumb pipes
+
+         - Don't use ESB approach of putting intelligence into communication mechanism
+         - Use simple communication protocols like REST or lightweight messaging
+    
+
+    5. Decentralized governance
+
+         - Use whatever technology is best for the domain
+         - Provide shared libraries where apporpriate
+
+
+    6. Decentralized data management
+
+         - Each service should manage its own DB
+         - Polyglot persistence to use the right data store for the use case
+         - Transactionless coordination between services
+         - Eventual consistency through compensating operations
+
+
+    7. Infrastructure automation
+
+         - Example pipeline:
+
+             1. Compile, unit, and functional test      # Run on build machine
+             2. Acceptance test                         # Deployed on build machine
+             3. Integration test                        # Deployed to integration environment
+             4. User acceptance test                    # Deployed to UAT environment
+             5. Performance test                        # Deployed to performance environment
+             6. Deploy to production
+
+
+    8. Design for Failure
+
+        - Any service call can fail, and clients should handle this gracefully
+        - Emphasis on real-time monitoring
+
+
+    9. Evolutionary Design
+
+        - Control change without slowing it down
+        - Independent replacement and upgradeability
+        - Keep things that change at the same time in the same module
+
+
+
+- Reducing Coordination Costs
+
+    - We often face a tradeoff between speed and safety when changing software.  Slowing down and waiting for
+        integration tests is safer, but slower.  The solution is to create and rely on interface contracts.
+        This allows teams to move at their own speed.
+
+
+    - The hard parts:
+
+        - Long feedback loops
+        - Too many moving parts
+        - Analysis paralysis
+
+
+
+- Learning By Doing
+
+    - In this book, we'll build a very simple flight reservation system.  It will only have 2 functions:
+        a read-only flight information service, and a seat reservation system.
+
+
+    - The Dreyfus Model of Skill Acquisition:
+
+        1. Novice
+        2. Advanced Beginner
+        3. Competence
+        4. Proficiency
+        5. Expertise
+
+
+
+- Architecture Decision Record
+
+    - An Architecture Decision Record is used to document decisions that we made.  It should have 4
+        important elements:
+
+        1. Context = What is the problem we are trying to solve?
+
+        2. Alternatives = What were the possible options we had?
+
+        3. Choice = What is the choice that we made?
+
+        4. Impact = What were the effects of our choice?  What are the trade-offs?
+
+
+    - We'll use a format called LADR (Lightweight ADR), created by Michael Nygard, for our project.  We
+        write them using Markdown.
+
+        # Sample LADR file
+        ----------------------------
+        # OPM1: Use ADRS for decision tracking
+
+        ## Status
+        Accepted
+
+        ## Context
+
+        ## Decision
+
+        ## Consequences
