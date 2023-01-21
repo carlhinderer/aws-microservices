@@ -1,0 +1,151 @@
+------------------------------------------------------------------
+| CHAPTER 1 - INTRO TO CLOUD MICROSERVICES                       |
+------------------------------------------------------------------
+
+- Security Definitions
+
+    - Vulnerability
+        - Any deficiency in a system that makes our system less secure
+        - Could be old version of OS or library
+
+
+    - Threat
+        - A vulnerability that becomes exploitable
+        - If vulnerability is exploited, the threat is realized
+        - A realized threat has a financial, reputational, or operational impact on an organization
+
+
+    - Malicious Actor (ie Threat Actor or Threat Agent)
+        - Anyone that takes advantage of a vulnerability to cause the threat
+
+
+    - Responsibility
+        - Dictates who is resonsible for ensuring that a potential threat never becomes a reality
+        - Can be an employee, automated system, or third-party product or service provider
+
+
+    - Risk
+        - Metric that tries to evaluate the probability of a threat being realized
+        - Realization would result in a loss that is financial, reputational, or operational
+        - Application's aggregated risk is probability-weighted sum of all threats
+
+
+    - Control/Countermeasure
+        - Any activity that results in lowering aggregate risk
+        - Usually directed at specific threats and have well-defined scopes
+
+
+
+- Risk and Security Controls
+
+    - The process of security design includes indentifying the controls that can be implemented to reduce
+        the aggregate risk in an organization.  
+
+    - Identifying threats and implementing a countermeasure is known as 'threat modeling'.
+
+    - Controls are 'blunt' is they unilaterally block all requests without trying to understand their
+        context or specifics.  Controls are 'sharp' if they identify and block specific requests.  Both
+        types may be required to prevent different types of attacks.
+
+    - Some controls, such as implementing proper monitoring and alerting, are not targeted at specific
+        threats, but can still reduce the aggregate risk of the application.
+
+
+
+- Organizational Security Policy
+
+    - 'Point solutions' (with a narrow, specific goal) often have side effects, such as developer friction.
+        Costs, timelines, and revenue targets can limit ability to mitigate individual vulnerabilities.
+
+    - A 'security policy' is an abstract plan that lays out the vision for identifying and implementing
+        controls.
+
+    - When designing a security policy, we need to think about 3 types of threats: possible, plausible, and
+        probable.  The environment the company operates in determines which threats to set up controls
+        against.
+
+    - This book's main goal is to help organizations frame and implement controls based on a well-framed
+        security policy.
+
+
+
+- Security Incidents and the CIA Triad
+
+    - A security incident occurs when a potential threat is realized.  Any security incident can compromise
+        one of three different parameters:
+
+        - Confidentiality = data is exposed or leaked to unauthorized parties 
+                              (ie data or password leaks)
+
+        - Integrity = an unauthorized change is perpetuated into the system 
+                              (ie data tampering, viruses, ransomware)
+
+        - Availability = system is prevented from performing it's usual tasks
+                           (ie brute force, DoS attacks)
+
+
+
+- AWS Shared Responsibility Model
+
+    - AWS is responsible for security of the cloud.  This includes protecting the infrastructure supporting
+        all the services provided by AWS.  For instance, this includes the physical machines and ensuring
+        your application is logically separated from other clients.
+
+    - The customer is responsible for the security of the application in the cloud.  This includes applying
+        regular security patches and implementing proper access control, encryption, and authentication
+        requirements.
+
+    - With managed AWS services, AWS assumes a larger responsibility than simply protecting the physical
+        cloud infrastructure.
+
+    - Note that 'AWS Artifact' compiles all compliance-related documents related to AWS services required
+        for compliance audits.
+
+
+
+- Cloud Architecture and Security
+
+    - Desiging secure systems requires taking a high-level systems view.  Architects should aim for the
+        forest instead of the trees, frame abstract design principles, and leave the implementation for
+        the developers.
+
+    - A great deal can be learned about the principles on security architecture in the book 'Enterprise
+        Security Architecture' by Nicholas Sherwood.
+
+
+    - Security Through Modularity
+        - A 'modular' application can be broken down into smaller pieces that can be worked on independently
+        - A modular application is easier to patch and eliminate vulnerabilities from
+        - Modularization is the key benefit that microservices provide
+
+
+    - Security Through Simplicity
+        - Simple systems are easier to secure than complex ones
+        - A large modular application composed of smaller, simpler modules ends up being easier to secure
+
+
+    - Security Through Fully Managed AWS Services
+        - For example, with RDS MySQL, AWS is responsible for running and patching the DB engine
+        - AWS also keeps the underlying OS current and eliminates any vulnerabilities that may exist on it
+        - Using managed services can greatly reduce the responsibility of your security team
+        - You may still need to do things like control access and configure firewalls
+        - Most managed services are compliant with most regulatory requirements (HIPAA, PCI, GDPR, etc.)
+
+
+    - Blast Radius, Isolation, and Locked Rooms
+        - In the threat modeling process, you identify vulnerabilities and imagine they are exploited
+        - The parts of your application the threat actor may have influence over is the 'blast radius'
+            (aka 'attack surface')
+        - You want to minimize the blast radius so that application can still function even with unauthorized
+            access.  This goal is achieved using the concept of 'isolation'.
+        - As a metaphor, if you have a building full of locked rooms, and one is breached, they aren't all
+        - Individual modules can be isolated from each other with strong authentication
+
+
+    - Defense-in-Depth and Security
+        - Multilayered, redundant, or even obselete controls are often more effective than a single solution
+        - This is known as 'defense-in-depth', which ensures there is no single-point-of-failure
+
+
+    - Security Through Perimiter Protection
+        - With this approach, organizations 
