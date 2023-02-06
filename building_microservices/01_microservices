@@ -1,0 +1,155 @@
+-----------------------------------------------------------------------
+| CHAPTER 1 - INTRO TO CLOUD MICROSERVICES                            |
+-----------------------------------------------------------------------
+
+- Microservices
+
+    - Microservices = independently releasable services modeled around a business domain
+
+        - Services available via networks
+        - Type of SOA
+        - Use whateer implementation and communication protocols are most appropriate
+        - Avoid use of shared DBs
+        - Embrace the concept of information hiding
+
+
+    - Hexagonal Architecture (Alistair Cockburn, 2005)
+
+        - Keep implementation separate from interfaces
+        - You may want to interact with the same functionality over different interfaces
+
+
+
+- Key Concepts of Microservices
+
+    - Independent Deployability
+
+        - Should be able to change and deploy without deploying other services
+        - Microservices should be loosely coupled with explicit, well-defined, stable contacts
+
+
+    - Modeled Around a Business Domain
+
+        - Techniques such as DDD allow you to structure your code to represent the real world
+        - 3-tiered architecture creates service boundaries based on technical functionality
+        - Creating boundaries along business functionality increases cohesion
+
+
+    - Owning Their Own State
+
+        - Avoid use of shared databases, send a request if you need data from a service
+        - Implementation can change freely as long as contract stays the same
+
+
+    - Size
+
+        - Service should be entirely understandable by one person
+        - Goal is to have as small an interface as possible
+
+
+    - Flexibility
+
+        - Microservices buy you options, you must decide if the cost is worth it
+
+
+    - Alignment of Architecture and Organization
+
+        - Conway's Law = Organizations produce designs that are copies of the organization
+        - 3-tiered architectures split teams on technical boundaries
+        - But most changes we are asked to make relate to changes in business functionality
+
+
+
+- The Monolith
+
+    - The Single-Process Monolith
+
+        - Monolith = All functionality in a system must be deployed together
+        - Single-Process = All the code is packed into a single process
+        - You may have multiple instances for robustness or scaling
+        - Still usually distributed systems since they use a DB and present data to a UI
+        - DHH made the case that this architecture makes sense for smaller organizations
+
+
+    - The Modular Monolith
+
+        - Single process consists of separate modules that can be worked on independently
+        - Can be a good choice if module boundaries are well-defined
+        - One challenge is that the DB tends to lack to decomposition at the code level
+
+
+    - The Distributed Monolith
+
+        - Multiple services, but the entire system must be deployed together
+        - Disadvantages of distributed system and disadvantages of single-process monolith
+        - Not enough focus on cohesion and information hiding
+
+
+    - Monoliths and Delivery Contention
+
+        - Developers get in each other's way, deployments become complicated
+        - Confused lines of ownership
+
+
+    - Advantages of Monoliths
+
+        - Deployment topology is simple
+        - Simpler development workflows, monitoring, troubleshooting, testing
+
+
+
+- Enabling Technology
+
+    - Log Aggregation and Distributed Tracing
+
+    - Containers and Kubernetes
+
+    - Streaming
+
+    - Public Cloud and Serverless
+
+
+
+- Advantages of Microservices
+
+    - Technology Heterogeneity
+
+    - Robustness
+
+    - Scaling
+
+    - Ease of Deployment
+
+    - Organizational Alignment
+
+    - Composability
+
+
+
+- Microservice Pain Points
+
+    - Developer Experience
+
+    - Technology Overload
+
+    - Cost
+
+    - Reporting
+
+    - Monitoring and Troubleshooting
+
+    - Security
+
+    - Testing
+
+    - Latency
+
+    - Data Consistency
+
+
+
+- Should I Use Microservices?
+
+    - When they don't work well
+
+    - When they work well
