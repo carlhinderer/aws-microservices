@@ -1,0 +1,166 @@
+-----------------------------------------------------------------------
+| CHAPTER 2 - HOW TO MODEL MICROSERVICES                              |
+-----------------------------------------------------------------------
+
+- What Makes a Good Microservice Boundary?
+
+    - Information Hiding
+
+        - Desire to hide as many details as possible behind a module (or microservice)
+        - Allows work to be done in parallel, resulting in improved development time
+        - Each module can be looked at and understood in isolation, improving comprehensibility
+        - Modules can be changed independently from one another, improving flexibility
+
+
+    - Cohesion
+
+        - Code that changes together should stay together, we want to make changes in one place
+        - Making changes in lots of places at the same time is slow and risky
+        - Strong cohesion = related behavior is in one place, loosely coupled with other services
+        - Weak cohesion = related functionality is spread throughout the system
+
+
+    - Coupling
+
+        - When services are loosely coupled, changing one shouldn't require changing another
+        - A service should know as little as possible about services it collaborates with
+        - We should limit the number of different types of calls from one service to another
+        - Chatty communication can lead to tight coupling
+
+
+    - The Interplay of Coupling and Cohesion
+
+        - Constantine's Law: "A structure is stable if cohesion is strong and coupling is low."
+        - If a contract is changed in a backwards-incompatible way, all consumers also have to change
+        - Cohesion relates to things inside a microservice
+        - Coupling relates to things across services
+
+
+
+- Types of Coupling
+
+    - Coupling Basics
+
+        - Some coupling is unavoidable, we just want to reduce the amount of coupling we have
+        - Structured programming (1970s) provides the foundations of building modular software
+
+
+    - Domain Coupling
+
+        - This is the lowest/loosest form of coupling
+        - In this case, one microservice needs to make use of the functionality another service provides
+        - For example, the OrderProcessor calls Warehouse to reserve stock and Payment to take payment
+        - OrderProcessor is dependent on Warehouse and Payment, but Warehouse and Payment have no coupling
+        - This type of coupling is largely unavoidable
+        - If one service talks to lots of other services, too much logic has been centralized
+        - Can also become a problem if too much complex data is being sent between services
+
+
+    - Temporal Coupling
+
+        - Concepts are bundled together simply because they happen at the same time
+        - One service needs another service to do something at the same time in order to complete
+        - Both services need to be up and communicate
+        - For example, the OrderProcessor makes a synchronous HTTP call to the Warehouse
+        - To avoid this, use asychronous communication such as a message broker
+
+
+    - Pass-Through Coupling
+
+        - One service passes data to another purely because the data is needed by another service downstream
+        - For example, OrderProcessor sends a shipping manifest to Warehouse, which forwards it to Shipping
+        - If Shipping contract changes, OrderProcessor and Warehouse both need to change
+        - Can be fixed by bypassing the intermediary, but then OrderProcessor has to talk to more services
+        - Another solution is to hide the requirement for a shipping manifest from the OrderProcessor
+        - Another solution is for the Warehouse to know nothing about the shipping manifest, treat it as blob
+
+
+    - Common Coupling
+
+        - This occurs when multiple services make use of a common set of data
+        - This common data could be a shared DB, shared memory, or a shared filesystem
+        - Changes to the structure of data can impact multiple services, makes DB difficult to change
+        - For example, OrderProcessor and Warehouse both update 'Status' column of Order table
+        - Problem is that one service's changes can break other service's view of the world
+        - This is usually fine for static read-only reference data
+        - One solution is to create finite state machine to manage transitions
+        - Another solution is to let a single service manage the order state
+        - For example, OrderProcessor and Warehouse can send update requests to Order service
+        - If Order service is just CRUD with no business logic, you may have weak cohesion
+        - Sources of common coupling are also often sources of resource contention (ie a slow DB)
+
+
+    - Content Coupling
+
+        - This is the highest/tightest form of coupling
+        - An upstream service reaches into the internals of a downstream service and changes it's state
+        - For example, one service directly accessing and changing another service's DB
+        - OrderProcessor sends requests to Order, but Warehouse updates Order DB directly
+        - Now we have to worry about other services when changing Order DB, information hiding is gone
+
+
+
+- Just Enough DDD
+
+    - Ubiquitous Language
+
+        - This is the idea that we should strive to use the same terms in our code that users use
+        - For example, in a corporate liquidity system, use terms like 'haircut' and 'end-of-day sweeps'
+
+
+    - Aggregate
+
+        - An 'aggregate' is a collection of objects managed as a single entity
+        - For example, Order, Invoice, or StockItem
+        - Typically a representation of a real-world domain concept
+        - Typically have a life cycle around them, which opens them to being implemented as a state machine
+        - Aggregate should reject illegal state transitions
+        - Can have relationships with other aggregates (ie a Customer has one or more Orders)
+        - Foreign-key relationships across service boundaries are difficult
+        - To solve this, we can store ids from the other service
+        - Another solution (if REST) is to store URLs to other entities instead of just ids
+
+
+    - Bounded Context
+
+        - This is a boundary within the business domain that provides functionality but hides complexity
+        - This typically represents a larger organizational boundary
+        - For example, Warehouse and Finance are separate contexts
+        - Bounded contexts contain one or more aggregates
+        - Bounded contexts have relationships with other bounded contexts, these are dependencies
+
+
+    - Example - Warehouse Bounded Context and Finance Bounded Context
+
+         [Warehouse]   [Shared Model]    [Finance]
+         Shelf                           CompanyValuation
+         StockItem ----> StockItem <---- StockReport
+         PickList                  <---- LedgerEntry
+         Picker
+         Trolley
+
+
+
+    - Mapping Aggregates and Bounded Contexts to Microservices
+
+    - Event Storming
+
+
+
+- The Case for DDD for Microservices
+
+
+
+- Alternatives to Business Domain Boundaries
+
+    - Volatility
+
+    - Data
+
+    - Technology
+
+    - Organizational
+
+
+
+- Mixing Models and Exceptions

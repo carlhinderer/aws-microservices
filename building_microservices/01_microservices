@@ -95,6 +95,8 @@
 
         - Deployment topology is simple
         - Simpler development workflows, monitoring, troubleshooting, testing
+        - Code reuse is simplified
+        - Sensible default choice as an architectural style
 
 
 
@@ -102,11 +104,35 @@
 
     - Log Aggregation and Distributed Tracing
 
+        - Troubleshooting is more difficult in a distributed system
+        - Collecting and aggregating logs from all services in a central place is essential
+        - Correlation ids give a single id for a set of related calls (ie all calls for a user interaction)
+        - Jaeger is a popular OSS tool for distributed tracing of performance
+        - Lightstep and Honeycomb are more fully-featured tools for this
+
+
     - Containers and Kubernetes
+
+        - Containers provide lightweight isolated execution environments
+        - K8s provides container orchestration platform
+        - K8s offers significant deployment advantages, but has overhead and steep learning curve
+        - Using managed K8s service on cloud provider can save a lot of work
+
 
     - Streaming
 
+        - Even though we don't use shared databases, we still need to share data between services
+        - Orgs are moving away from batch reporting toward real-time feedback
+        - Kafka is de facto choice for streaming data in a microservices environment
+        - KSQLDB or Flink can provide stream-processing capabilities
+        - Debezium is OSS tool for streaming data from existing datasources over Kafka
+
+
     - Public Cloud and Serverless
+
+        - Huge array of managed services and deployment options is available
+        - Using managed service offloads a lot of operational work to a third party better able to do it
+        - Serverless = Hide underlying machines, higher level of abstraction
 
 
 
@@ -114,15 +140,41 @@
 
     - Technology Heterogeneity
 
+        - Can use the right tool for each job
+        - For example, use Graph DB for social graph but store users in Document DB
+        - Adapt more quickly to new technologies
+        - Less risk when trying out new technologies
+        - May still want to constrain this (ie only use JVM)
+
+
     - Robustness
+
+        - One component can fail, but as long as failure doesn't cascade it won't take whole system down
+        - Need to understand new types of failures associated with distributed systems
+        - Need to understand and handle different types of failures
+
 
     - Scaling
 
+        - Scale just the services that need scaling, instead of entire monolith
+        - Allows us to control costs more effectively
+
+
     - Ease of Deployment
+
+        - Releases in monoliths are high-risk and end up with large deltas
+        - With microservices, we can quickly release frequently, and roll back if a problem occurs
+
 
     - Organizational Alignment
 
+        - Smaller teams working on smaller codebases tend to be more productive
+        - Microservices allow us to better align our architecture to our organization
+
+
     - Composability
+
+        - Our functionality can be consumed differently in different ways (web, mobile, etc.)
 
 
 
@@ -130,21 +182,60 @@
 
     - Developer Experience
 
+        - It is impossible to run all the microservices on a single developer machine
+        - This is especially true if you're using cloud services you can't deploy locally
+        - Some people "develop entirely in the cloud", but feedback cycles suffer
+        - The best solution is usually to limit the scope of parts a developer needs to work on
+
+
     - Technology Overload
+
+        - It can be risky to adopt a bunch of new technologies while also switching to microservices
+        - Each service can be written in a different language, but they don't need to be
+
 
     - Cost
 
+        - In the short term, costs will rise, as you need to run more processes/VMs/network/storage
+        - New feature development will also slow down at first
+        - Microservices are not a great choice for an organization looking to cut costs
+
+
     - Reporting
+
+        - You can't just join all the data together when it's stored in different places
+        - More modern approaches such as streaming are necessary
+        - Alternatively, you can just publish all your data into central reporting DBs or data lakes
+
 
     - Monitoring and Troubleshooting
 
+        - A monolith is either all-up or all-down, while microservices can have partial failures
+        - What is the impact if a single service goes down?
+
+
     - Security
+
+        - Information now flows over networks between our services
+        - We need to secure data both at rest and in transit
+
 
     - Testing
 
+        - The scope of end-to-end tests becomes very large
+        - Environmental issues, like service instances dying or network timeouts, can cause test failures
+        - Contract-driven testing or just testing in production become more common
+
+
     - Latency
 
+        - Data moves across a network instead of inside a single process
+        - Move functionality to microservices incrementally, and use distributed tracing like Jaeger
+
+
     - Data Consistency
+
+        - DB transactions can no longer be used, you need to use things like sagas and eventual consistency
 
 
 
@@ -152,4 +243,13 @@
 
     - When they don't work well
 
+        - Brand-new products or startups where lots of iterating is happening and boundaries are fluid
+        - Small teams that don't need to scale up yet
+        - Installations that customers have to operate
+
+
     - When they work well
+
+        - Large organizations with stable boundaries
+        - SaaS applications that can benefit from rolling deployments and elastic scalability
+        - Systems with varied requirements that can benefit from technology-agnostic nature
