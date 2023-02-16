@@ -130,7 +130,7 @@
         - Bounded contexts have relationships with other bounded contexts, these are dependencies
 
 
-    - Example - Warehouse Bounded Context and Finance Bounded Context
+    - Example - Warehouse Bounded Context and Finance Bounded Context (Hidden Models)
 
          [Warehouse]   [Shared Model]    [Finance]
          Shelf                           CompanyValuation
@@ -139,15 +139,52 @@
          Picker
          Trolley
 
+        - Finance needs to know about stock levels to keep accounts up to date
+        - Only part of StockItem representation (the counts) needs to be exposed to Finance service
+
+
+    - Shared Models
+
+        - We can also have models that appear in more than one bounded context
+        - For example, finance needs to know about payments made to a customer
+        - Warehouse needs to know what packages have been sent to a customer to track deliveries
+        - Since information is different, we can store information about the customer in both locations
+        - We may still need to link both concepts to a global customer for shared info (ie name, email)
+
+                Customer                  [Finance]
+                   ^                       CustId           Amount
+                   |                       -------------------------
+                   ---------------------   /customer/141    $55.99
 
 
     - Mapping Aggregates and Bounded Contexts to Microservices
 
+        - Both the aggregate and bounded context give us units of cohesion with well-defined interfaces
+        - The aggregate is a self-contained state machine that focuses on a single domain concept
+        - The bounded context is a collection of associated aggregates with an interface to the wider world
+        - Both can work well as service boundaries
+        - Start out by creating services that represent entire bounded contexts, can split later if needed
+        - Note that you shouldn't split aggregates apart, want them to be managed by one service
+        - Even if you split a service into multiple services, may want to keep single interface
+
+
     - Event Storming
+
+        - 'Event storming' is a collaborative brainstorming exercise to help surface a domain model
+        - Technical and nontechnical stakeholders participate to create shared view of the world
+        - Get everyone together in the same room with whiteboards and sticky notes
+        - First, identify all the domain events (ie 'Order placed' and 'Payment received')
+        - Second, identify commands that cause these events to happen (ie 'User does something')
+        - Third, identify the aggregates (ie 'Order')
+        - Fourth, group the aggregates into bounded contexts
 
 
 
 - The Case for DDD for Microservices
+
+    - Bounded contexts are about hiding information, useful for defining clear boundaries
+    - Using ubiquitious language helps when defining microservice endpoints
+    - Puts the business domain at the heart of the software we build
 
 
 
@@ -155,12 +192,25 @@
 
     - Volatility
 
+        - Volatility-based decomposition identifies parts of system going through more frequent change
+        - These frequently changed parts go into their own services
+        - "Bimodal IT" = Mode1 (systems of record) and Mode2 (systems of innovation)
+        - Bimodal IT is overly simplistic, but this technique can be useful combined with other techniques
+
+
     - Data
+
+        - For example, might want to put all PII or PCI-compliant data into separate service
+        - This can reduce auditing costs
+
 
     - Technology
 
+        - Maybe certain functionality needs different databases
+        - Maybe certain functionality needs different PLs
+
+
     - Organizational
 
-
-
-- Mixing Models and Exceptions
+        - Company structure drives system architecture
+        - What happens if the organization changes its structure?
