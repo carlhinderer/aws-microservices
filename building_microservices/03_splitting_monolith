@@ -1,0 +1,117 @@
+-----------------------------------------------------------------------
+| CHAPTER 3 - SPLITTING THE MONOLITH                                  |
+-----------------------------------------------------------------------
+
+- Have a Goal
+
+    - Only convert to microservices if you have a good reason, don't confuse activity with outcome
+    - Think about all the different ways you could solve your architecture challenges
+
+
+
+- Incremental Migration
+
+    - Chip away at the monolith, extracting a bit at a time
+    - This will help you learn the process and limit the impact of getting something wrong
+    - Get small wins to help build momentum
+    - You don't understand the difficulty of microservices until you run them in production
+
+
+
+- The Monolith is Rarely the Enemy
+
+    - The monolith is not the problem, don't focus on just not having a monolith
+    - The monolith may remain with some functionality even after converting to microservices
+    - Beware premature decomposition, breaking things apart before understanding boundaries can be costly
+
+
+
+- What to Split First?
+
+    - Start with the reasons why you want to split the monolith
+    - If you want to scale the application, start with the parts that have the highest load
+    - If you want to improve time to market, look at the parts that change most frequently
+
+
+
+- Decomposition by Layer
+
+    - When decomposing, we can consider the 3 traditional layers - UI, backend application code, data
+    - Don't ignore the UI part of the docomposition - this can be the trickiest part!
+    - Both the backend code and related storage must be in scope when splitting out a microservice
+
+
+    - Code First
+
+        - This is the most common approach, because it provides the most short-term benefit
+        - This tends to be easier than splitting out the DB, but we must do that also
+        - Do the legwork to sketch out how to split out both before you start
+
+
+    - Data First
+
+        - Deal with the more difficult part up front
+        - Deal with loss of enforced data integrity and lack of transactional operations
+
+
+
+- Useful Decompositional Patterns
+
+    - Strangler Fig Pattern
+
+        - Wrap an old system with the new system over time
+        - Allow the new system to take over more and more features of the old system incrementally
+        - Intercept calls to the existing system, and forward them to either monolith or microservices
+        - This can often be done without making changes to the monolith
+
+
+    - Parallel Run
+
+        - Useful if nervous about migrating soem critical functionality
+        - Run functionality in monolith and microservice at the same time
+        - Serve each the same requests, and compare the results
+
+
+    - Feature Toggle
+
+        - Mechanism that allows a feature to be switched between different implementations
+        - Could be used with Strangler Fig Pattern
+
+
+
+- Data Decomposition Concerns
+
+    - Performance
+
+        - Joins in a DB are very performant, splitting into separate databases incurs a cost
+        - The overall latency of operations that require data from multiple services inevitably increases
+        - We may be able to cache data, but operations that happen more frequently may be a problem
+        - We may be able to batch operations to improve performance
+
+
+    - Data Integrity
+
+        - We can no longer enforce referential integrity of foreign keys
+        - If we delete a record in one database, we may still have references to it in other database
+        - We could soft delete records in the first table
+        - We could also copy all required data into the second table, but then updates are hard to handle
+
+
+    - Transactions
+
+        - Traditionally, we have built applications around ACID DB Transactions
+        - Distributed transactions are a non-starter
+        - Mechanisms like sagas can be used, but they bring their own complexities
+
+
+    - Tooling
+
+        - Changing DBs is more difficult than changing code, since the things changing have state
+        - Using version-controlled delta scripts like Rails migrations can be helpful
+
+
+    - Reporting Database
+
+        - Hiding direct access to our databases makes reporting more difficult
+        - We should also practice information hiding in the reporting DB, only exposing necessary data
+        - We may want to treat the reporting DB like any other microservice
