@@ -1,0 +1,264 @@
+-----------------------------------------------------------------------
+| CHAPTER 4 - MONOLITH COMMUNICATION STYLES                           |
+-----------------------------------------------------------------------
+
+- From In-Process to Inter-Process
+
+    - Performance
+
+        - An API that makes sense in-process may not make sense in inter-process situations.  You can 
+            make 1000 calls across an API boundary in-process, you may not want to do that over network.
+
+        - When you pass a data structure in-process, the data doesn't move.  When you pass data over a 
+            network, it has to be serialized and deserialized.
+
+        - You may need to reduce the amount of data being sent, pick more efficient serialization
+            mechanisms, or offload the data to a filesystem and just pass around pointers to it.
+
+
+    - Changing Interfaces
+
+        - Changing interfaces inside a process is easy, since the code implementing the interface and the
+            code calling the interface are packaged together.
+
+        - With communication between microservices, these components are separately deployed.  If you
+            make a backwards-incompatible change, you need a lockstep release with consumers.
+
+
+    - Error Handling
+
+        - Within a process, the nature of errors is pretty straightforward.  Either errors are expected
+            and easy to handle, or they are catastrophic and we just propogate them up the call stack.
+            Errors are deterministic.
+
+        - With a distributed system, you are vulnerable to a host of errors that are outside your
+            control.  Networks time out, downstream systems become temporarily unavailable, containers
+            get killed, etc.
+
+
+        - In 'Distributed Systems' by Tannenbaum and Steen, they describe 5 failure modes in inter-process
+            communications:
+
+            1. Crash Failure = The server crashed, reboot.
+
+            2. Omission Failure = You sent something, but didn't get a response.
+
+            3. Timing Failure = Something happened too late or too early.
+
+            4. Response Failure = You got a response, but something is wrong (ie pieces are missing).
+
+            5. Arbitrary (Byzantine) Failure = Something went wrong, but participants can't agree if a
+                                                 failure has occurred (or why).
+
+
+        - Many of these failures are transient in nature.
+
+        - Having a communication mechanism that provides semantics around the nature of the error makes it
+            much easier for clients to carry out compensating actions.  For instance, HTTP responses with
+            400 and 500 error codes are an example of a protocol that does this well.
+
+
+
+- Styles of Microservice Communication
+
+    - The range of choices for inter-process communication is vast.  The most important thing is to pick
+        a technology that maps well to the problem you are trying to solve.  Each technology comes with
+        a set of ideas and constraints.
+
+    - For instance, using Kafka for request-response isn't a good idea.
+
+
+    - Synchronous Blocking
+
+        - With the 'Synchronous Blocking' style, a microservice makes a call to another microservice and 
+            blocks operation waiting for the response.
+
+        - This is a request-response style of communication.
+        
+        - Common implementation choices include REST over HTTP and RPC.
+
+
+    - Asynchronous Nonblocking
+
+        - The microservice makes a call, then is able to carry on processing whether or not the call is
+            received.
+
+
+    - Asynchronous - Request-Response
+
+        - A microservice sends a request to another microservice asking for something to be done.  It
+            expects to receive a response informing it of the result.
+
+        - Common implementation choices include queue-based brokers and RPC.
+
+
+    - Asynchronous - Event-Driven
+
+         - Microservices emit events, which other microservices consume and react accordingly.  The
+             microservice emitting the event is unaware of which microservices, if any, consume the
+             events it emits.
+
+        - Common implementation choices include topic-based brokers and REST over HTTP (Atom).
+
+
+    - Asynchronous - Common Data
+
+        - Microservices collaborate via some shared data source.
+
+        - Common implementation choices include a database or filesystem.
+
+
+    - Your needs in terms of reliable communication, acceptable latency, and volume of communication are
+        important in making a technology choice.  Security-related aspects and ability to scale must
+        also be considered.
+
+    - Most microservice architectures have a mix of collaboration styles.  Some interactions make sense
+        as request-response, while some are event-driven.  For example, an Order service exposes a
+        request-response API that allows order to be placed or changed, then fires events when those
+        changes are made.
+
+
+
+- Pattern: Synchronous Blocking
+
+    - With this pattern a microservice makes a call to a downstream process and blocks until the call is
+        completed (and potentially until a response is received).
+
+    - This may be because the result of the call is needed for some further operation , or just because
+        it wants to make sure the call worked and to carry out a retry if not.
+
+    - This is the easiest style to understand, since we all learned to program in a fundamentally
+        synchronous style.  Even when we use inter-process communication (ie making a SQL query or calling
+        an API), we still usually do it in a synchronous, blocking style.
+
+    - The biggest disadvantage is the inherent temporal coupling.  If the downsteam call fails, the calling
+        service will need to figure out some kind of compensating action.  This might involve an
+        immediate retry, buffering the call to retry later on, or giving up altogether.
+
+    - The coupling is two-way.  If the callee wants to return a response to the caller, but the caller has
+        died, the response will get lost.
+
+    - Network latency issues will cascade, blocking the sender for a prolonged period of time.
+
+
+    - For simple microservice architectures, this style may be fine.  It begins to be problematic when you
+        start having chains of calls.  Any issue with any of the involved microservices could cause the
+        whole operation to fail.  Also, these long chains can cause resource contention, since network
+        connections are left open.
+
+        OrderProcessorService -- Take payment --> 
+        PaymentService -- Check for fraud --> 
+        FraudDetectionService -- Fetch customer record -->
+        Customer
+
+
+    - To improve this situation, we could reexamine the interactions between services.  Maybe we take the
+        use of FraudDetectionService out of the main process flow, and instead have it run in the
+        background.  If it finds problems with a specific customer, their records are updated accordingly.
+
+
+
+- Pattern: Asynchronous Nonblocking
+
+    - With asynchronous communication, the act of sending a call out over the network doesn't block the
+        microservice issuing the call.  The 3 most common forms are:
+
+        - Communication through data = The upstream service changes some common data, which one or more
+            services later make use of.
+
+        - Request-Response = A service sends a request to another service.  When the requested operation
+            completes, the upstream microservice receives the response.  Any instance of the upstream
+            service should be able to handle the response.
+
+        - Event-Driven = A service broadcasts an event, which can be thought of as a factual statement
+            about what happened.  Other services can listen for the events they are interested in and
+            react accordingly.
+
+
+    - The service making the initial call and the service receiving the call are decoupled temporarily.
+        The services that receive the call do not need to be reachable at the same time the call is made.
+
+    - This style is beneficial if the functionality being triggered by a call will take a long time to
+        process.  For instance, the OrderProcessor sends a call to the Warehouse to ship out a CD and
+        later the Warehouse will inform it of it's progress.
+
+    - The main downsides are the level of complexity and the range of choice.  Mapping this style to your
+        mental models can be challenging at first.
+
+    - When considering the style, you also have to consider the type of asynchronous communication to 
+        use.  Some specific use cases have obvious candidates.
+
+
+
+- Async/Await and When Asynchronous is Still Blocking
+
+    - The style of programming where async/await constructs is used has become very popular.  This style
+        works with a potentially asynchronous source of data but in a blocking, synchronous style.
+
+
+    - Here is a JavaScript example.  The currency rates fluctuate throughout the day, and we receive these
+        via a message broker.  We define a Promise, which is something that will resolve to a state at
+        some point in the future.
+
+        // Work with a potentially asynchronous call in a blocking, synchronous fashion
+        async function f() {
+          let eurToGdp = new Promise((resolve, reject) => {
+            // Code to fetch latest exchange rate between EUR and GBP
+          });
+
+          var latestRate = await eurToGbp;      // Wait until the rate is fetched
+          process(latestRate);                  // Won't run until promise is fulfilled
+        }
+
+
+    - Even though the rates are being received in an asynchronous fashion, the use of 'await' here means
+        that we are blocking until the state of 'latestRate' is received.  So the underlying technology
+        is asynchronous, but we are using it in a synchronous way.
+
+
+
+- Pattern: Communication Through Common Data
+
+    - With this pattern, one service puts data in a defined location, and another service then makes use
+        of the data.  In some ways, this is the most common inter-process communication style.
+
+    - To implement this pattern, you need some sort of persistent store for data, like a filesystem, a
+        database, or a robust distributed memory store.
+
+    - Any downstream service will need its own mechanism to identify that new data is available.  Polling
+        is a common solution to this problem.
+
+    - Two common examples of this pattern are the data lake and data warehouse.  With a data lake, users
+        upload raw data in whatever format they see fit, and downstream consumers are expected to know how
+        to process the information.  With a DW, the warehouse is structured, and services pushing data need
+        to know the structure of the DW.
+
+    - With both data lakes and DWs, the assumption is that the flow of information is in a single direction.
+        This can make it easier to reason about the flow of information.  If one microservice writes to a
+        data store, and other services read from it, this is likewise easier to reason about.  If multiple
+        services read and write to the same store, this introduces more problematic coupling.
+
+    - This pattern can be implemented simply using commonly understood technologies.  This makes it
+        interoperable between different types of systems.
+
+    - Disadvantages include downstream consumers needing to be aware of new data, which requires polling.
+        This makes it unlikely to be useful in low-latency situations.
+
+    - Another disadvantage is that the common data store can become a potential source of coupling.  If the
+        data store changes, it can break communication between services.
+
+    - Another disadvantage is that the 
+
+
+
+- Pattern: Request-Response Communication
+
+    - 
+
+
+
+- Pattern: Event-Driven Communication
+
+
+
+- Proceed with Caution
