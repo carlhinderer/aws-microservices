@@ -247,18 +247,129 @@
     - Another disadvantage is that the common data store can become a potential source of coupling.  If the
         data store changes, it can break communication between services.
 
-    - Another disadvantage is that the 
+    - Another disadvantage is that the robustness of the communication will depend on the robustness of
+        the data store.
+
+    - This pattern shines in enabling interoperability between processes that might have restrictions on
+        what kinds of technologies they can use.  For instance, older systems may have limitations and
+        higher costs of change.
+
+    - This pattern also shines for sharing large volumes of data, like sending multi-GB sized files or
+        loading a few million records into a database.
 
 
 
 - Pattern: Request-Response Communication
 
-    - 
+    - When one service requests data from another service, the call is usually synchronous.
+
+        1. OrderService checks stock from Inventory
+        2. Inventory returns the stock level
+
+
+    - Sometimes, you just need to make sure something gets done.  This can often be done asynchronously.
+
+        1. OrderProcessor reserves stock from Inventory
+        2. Inventory sends confirmation that stock was reserved
+
+
+    - With a synchronous call, typically a network connection is opened with the downstream microservice,
+        and the connection stays open until the response is received.  In this case, the microservice
+        sending the response doesn't need to know anything about the caller, since it's just sending
+        stuff back over the inboud connection.  If one of the services dies, we may have a problem
+
+    - With an asynchronous call, we could have a message being sent over a message broker.  The
+        OrderProcessor puts a message in the Inventory queue, and the Inventory service will consume it
+        when it's able.  A response is sent back to a queue that OrderProcessor is reading from.
+
+    - With a nonblocking operation, the service receiving the request needs to know where to route the
+        response to.  It may also need to relate the response to the original request.  This can be
+        challenging, since the response may not go back to the same instance that sent the request.
+        Storing state in a DB is one solution to this problem.
+
+    - Note that if we need to make several requests to APIs, we may want to run all of them in parallel
+        rather than running them sequentially, to save time.
+
+    - Request-response calls work well when the result of a request is needed before further processing
+        can take place.  They also work well in situations where a service needs to know if a call failed
+        so it can take some kind of compensating action.
 
 
 
 - Pattern: Event-Driven Communication
 
+    - Rather that a service asking another service to do something, a service emits events that may or 
+        may not be received by other microservices.  This is an inherently asynchronous interaction.
+
+    - An 'event' is a statement about something that has occurred in the world of the microservice that
+        is emitting the event.  The service emitting the event has no knowledge of the intent of other
+        services to use the event.
+
+    - For example, the Warehouse emits an 'OrderPackaged' event.  Notifications is subscribed to the
+        event, and sends an email to the customer.  Inventory is also subscribed to the event, and it
+        updates stock levels.
+
+    - The Warehouse is just broadcasting events, unaware of who the recipients are.  This makes
+        event-driven interactions much more loosely coupled in general.
+
+
+
+- Implementation of Event-Driven Communication
+
+    - There are 2 main implementation aspects we need to consider:
+
+        1. How does a server emit events
+        2. How do consumers find out events have happened
+
+
+    - Traditionally, message brokers like RabbitMQ try to handle both problems.
+
+        - Producers use an API to publish an event to the broker.
+        - The broker handles subscriptions, allowing consumers to be informed when an event arrives.
+        - Brokers can even handle state of consumers, ie by keeping track of which messages they've seen
+
+
+    - Note that many vendors sell bloated middleware, which leads to an enterprise service bus approach
+        where intelligence is pushed to the middleware.  Be wary of this, and try to keep the middleware
+        as dumb as possible, with the intelligence in the endpoints.
+
+
+    - Another approach is to use HTTP as a way of propogating events.  Atom is a REST-compliant
+        specification that describes semantics for publishing feeds of resources.  
+
+        - Many client libraries exist to create and consume these feeds.
+        - Producers publish an event to the feed whenever a change occurs.
+        - Consumers poll the feed, looking for changes.
+        - You can end up spending a lot of time and effort just re-creating message broker like behavior.
+
+
+
+- What's in an Event?
+
+    - With a request, we are asking a service to do something and providing the required information for
+        the requested operation to be carried out.  With an event, we don't know who will receive it, so
+        what information should we include in the event?
+
+    - For instance, our Customer service fires a 'Customer Registered' event.  One option is to include 
+        just an ID for the newly registered customer.  In this case, services that need additional 
+        information about the customer will need to fetch it from the service later.  This can lead to
+        coupling, since other services will need to know something about he Customer service, and it
+        can lead to heavy load on the Customer service.
+
+    - Another option is to put everything into the event you would share via an API.  This way, consumers
+        can do their job without communicating with the Customer service.  This also gives you a historical
+        record, which can help with auditing.  Potential downsides are that events can be large and you
+        may end up broadcasting PII to more places than you'd like.
+
+    - We should also consider that once we put data into an event, it becomes part of our contract with
+        the outside world.  If we remove a field, we may break external parties.
+
 
 
 - Proceed with Caution
+
+    - Asynchronous communication has many benefits, but it does lead to increased complexity.  Be cautious
+        with how you adopt these ideas.
+
+    - Ensure you have good monitoring in place, and consider using correlation ids so that you can trace
+        requests across process boundaries.

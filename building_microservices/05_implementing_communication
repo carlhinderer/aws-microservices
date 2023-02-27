@@ -1,0 +1,300 @@
+-----------------------------------------------------------------------
+| CHAPTER 5 - IMPLEMENTING MICROSERVICE COMMUNICATION                 |
+-----------------------------------------------------------------------
+
+- Looking for the Ideal Technology
+
+    - Make backwards compatibility easy.  When making changes, we want to make sure we don't break
+        compatibility with any existing services.  Simple operations like adding fields shouldn't break
+        clients.
+
+    - Make your interface explicit, it should be clear to consumers what functionality a service exposes.
+        Some technologies require a schema, while for other it is optional.  Either way, there should
+        be an explicit schema and supporting documentation.
+
+    - APIs should be kept technology-agnostic.  This will help you keep your options open.
+
+    - Your service should be simple for consumers to use.  We could consider building client libraries,
+        but these can increase coupling.
+
+    - You want to hide internal implementation detail as much as possible.  If consumers are bound to our
+        internal implementation, it increases coupling and the cost of change.
+
+
+
+- Technology Choices
+
+    - There are a ton of technology choices, but we'll look at a few of the most popular:
+
+        - RPC
+          - Frameworks that allow for local method calls to be invoked on a remote process
+          - Common options include SOAP and gRPC
+
+        - REST
+          - Architectural style where you expose resources that can be accessed using a common set of verbs
+
+        - GraphQL
+          - Protocol that allows consumers to define custom queries that can fetch information from 
+              multiple downstream services, filtering to return only what is needed.
+
+        - Message brokers
+          - Middleware that allows for asynchronous communication via queues and topics
+
+
+
+- Remote Procedure Calls
+
+    - RPC is the technique of making a local call and having it execute on a remote service somewhere.
+
+    - Most RPC technologies, like SOAP and gRPC, require an explicit schema.  The schema is often 
+        referred to as an Interface Definition Language (ie WSDL for SOAP).  The use of separate schemas
+        makes it easier to generate client and server stubs for different technology stacks.
+
+    - Some technologies, like Java RMI, call for the client and server to use the same underlying
+        technology.
+
+    - Typically, using an RPC technology means you are buying into a serialization protocol.  The RPC
+        framework describes how data is serialized and deserialized.  For instance, gRPC uses the protocol
+        buffer serialization framework.  SOAP makes nominal use of HTTP.
+
+    - RPC frameworks that have an explicit schema make it very easy to generate client code.  This can
+        avoid the need for client libraries.  However, for this to work, the client needs some way to
+        get the schema out of band.  Avro RPC is an outlier here, as it has the option to send the full
+        schema along with the payload, which allows clients to dynamically interpret the schema.
+
+    - Technology coupling (ie Java RMI) is one possible challenge of using RPC.  However, many
+        implementations (ie gRPC, SOAP, Thrift) allow for interoperability.
+
+    - Sometimes, RPC goes too far in trying to hide the complexity of a remote call.  Performance and
+        error handling are still much different from local calls.  You still need to think about the
+        network itself.
+
+    - Some RPC implementations can lead to brittleness.  A technology that defines methods to be used by
+        both sides will require both sides to be changed when the method signature changes.
+
+    - A key challenge is that with any RPC technology that promotes binary stub generation, you don't
+        get to separate client and server deployment.  You may need lock-step releases.
+
+    - In general, modern implementations like gRPC are useful, while older implementations like Java RMI
+        are problematic, and SOAP is heavyweight without much benefit.  If you use RPC, don't abstract
+        the network to the point where it is hidden.
+
+
+
+- REST
+
+    - REST (Representational State Transfer) is an architectural style inspired by the web.  Things that
+        the service knows about (ie Customer) are modeled as resources.  The server creates different
+        representation of these resources on request.
+
+    - How a resource is shown externally is completely decoupled from how it is stored internall.  For
+        instance, a client might ask for a JSON representation of a resource.
+
+
+    - There are many different styles of REST.  The Richardson Maturity Model compares the different styles:
+
+        0. HTTP is a tunneling mechanism, don't use any mechanisms of the web, all requests to one endpoint
+        1. Use resources, separate endpoints for resources
+        2. HTTP verbs
+        3. Hypermedia controls (HATEOAS)
+
+
+    - REST is commonly used over HTTP, but can be used with different protocols.  HTTP verbs are typically
+        used to define common behavior on all resources.  
+
+    - HTTP brings a large ecosystem of supporting tools and technology.  We can use HTTP caching proxies
+        like Varnish and load balancers like mod_proxy.  Many monitoring tools have HTTP support out of the
+        box.
+
+    - We can use all of the available security controls with HTTP to secure our communications.  From
+        basic auth to client certs, the HTTP ecosystem makes the security process easier.
+
+
+    - HATEOAS (Hypermedia as the Engine of Application State) helps us decouple the client and server.
+        Hypermedia is a concept in which a piece of content links to various other pieces of content.
+        The client should be able to perform interactions with the server without having to know which
+        URLs to hit.
+
+        <album>
+          <name>Give Blood</name>
+          <link rel="/artist" href="/artist/theBrakes" />
+          <description>
+            Awesome, short, brutish, funny and loud. Must buy!
+          </description>
+          <link rel="/instantpurchase" href="/instantPurchase/1234" />
+        </album>
+
+
+    - Historically, you are not able to generate client code directly from your REST API, so many times
+        client libraries are created for consumers to make use of.  This makes consuming APIs easier, but
+        it does lead to coupling.
+
+    - The OpenAPI specification (which grew out of the Swagger project) alleviates this problem by defining
+        enough information on a REST endpoint to allow for generation of client-side code.
+
+    - REST over HTTP payloads are smaller than SOAP, because REST supports formats like JSON or even
+        binary.  But, payloads are still much larger than they would be with Thrift or another low-overhead
+        protocol.  This may be a concern for low-latency requirements.
+
+    - All mainstream HTTP protocols in use require the use of TCP, which has some inefficiencies compared
+        with other networking protocols.  HTTP/3, which is currently in the process of being finalized,
+        will improve some of these issues, but is still years away from mainstream adoption.
+
+    - Due to its widespread use, REST is a good choice for an API that can be used by a wide variety of
+        clients.  Effective caching is well-supported.  REST works well for synchronous communication.
+
+    - You can construct asynchronous interaction protocols over REST, but there are more efficient
+        alternatives.
+
+
+
+- GraphQL
+
+    - GraphQL has gained a lot of popularity, because it makes it possible for clients to define queries
+        that can avoid the need for multiple requests.  This can offer significant performance
+        improvements.
+
+    - For example, a mobile device needs to display an overview of a customer's recent orders.  It only
+        needs a few fields about the customer and their 5 most recent orders (only the date, value, and
+        shipping status).  With REST, we would need to make several calls to different services, and
+        would need to pull back information that isn't actually required.
+
+    - GraphQL allows the mobile device to issue a single query that can pull back all the required 
+        information.  For this to work, you need a microservice that exposes a GraphQL endpoint to the
+        client device.  This endpoint is the entry for all client queries and exposes a schema for the 
+        client devices to use.
+
+    - The schema exposes the types available to the client, and a nice graphical query build is also
+        available to make creating these queries easier.
+
+    - Early on, a main challenge was that JavaScript was the only language that really supported the
+        GraphQL specification.  Now, all major languages have some level of support.
+
+    - GraphQL can have problems similar to SQL, where expensive queries consume a lot of server-side
+        resources.  We can't use optimized query planners like SQL does when execution is spread across
+        multiple microservices.
+
+    - Caching is also not nearly as straightforward as it is with REST calls, which can use well-defined
+        response headers or intermediate caches like CDNs.  This is one of the problems the Apollo project
+        was created to solve.  This may not be a big problem if your cache hit ratio is low because your
+        users send highly specific queries.  But compared with REST, it can be a big limitation.
+
+    - GraphQL is well-designed for reads, but doesn't seem as natural for writes.  This leads may teams
+        to use GraphQL for reads, but REST for writes.
+
+    - GraphQL endpoints are usually used for the permiter of the system, where they are consumed by 
+        clients like GUIs.  It doesn't generally replace microservice-to-microservice communication.
+        It is fundamentally a call aggregation and filterning mechanism.
+
+
+
+- Message Brokers
+
+    - Message brokers are intermediaries (aka 'middleware') that sit in between processes to manage
+        communication between them.  A message is a generic concept that defines the thing that a message
+        broker sends.  A message could be a request, a response, or an event.
+
+    - Brokers tend to provide either queues or topics, or both.  Queues are typically point-to-point.  
+        A sender puts a message on a queue, and a consumer reads from that queue.  With a topic-based 
+        system, multiple consumers can subscribe to a topic, and each subscribed consumer will receive a 
+        copy of that message.
+
+    - A consumer could represent one or more microservices, typically modeled as a consumer group.  For
+        instance, all of the instances or OrderProcessor are part of the same consumer group.  When a
+        message is put into the queue, only one member of the consumer group will receive the message.
+        This means that the queue works as a load distribution mechanism.
+
+    - With topics, you can have multiple consumer groups.  For instance, a message put onto the Order Status
+        topic could be read by both the Warehouse consumer group and the Notifications consumer group.
+
+    - At first glance, a queue just looks like a topic with a single consumer group.  The other big
+        difference is that when a message is sent to a queue, there is knowledge of what the message
+        is being sent to.  With a topic, the sender is unaware of any recipients.
+
+    - Topics are a good fit for event-based communication, whereas queues would be more appropriate for
+        request/response communication.
+
+    - The most interesting feature of brokers is guaranteed delivery, which can be very useful in reducing
+        the number of things the sending service needs to worry about.  For guaranteed delivery to work,
+        the broker needs to hold onto messages not yet delivered in a durable fashion until they can
+        be delivered.  This means brokers usually operate in a cluster-based system for fault tolerance.
+
+    - There is typically a lot involved in running a broker correctly, partly due to the challenges of
+        setting up and managing a distributed system.
+
+    - Most brokers can guarantee the order in which messages are delivered, but the details of this vary.
+        For instance, with Kafka ordering is guaranteed only within a single partition.
+
+    - Some brokers provide transactions on write.  For instance, Kafka allows you to write to multiple
+        topics in a single transaction.
+
+    - Some brokers offer exactly once delivery.  In practice, this can be very difficult to implement.
+        You may be better off building consumers so that they are prepared to see a message more than
+        once and can handle this situation.  For example, each message can have an ID, and consumers
+        can check whether a message with that ID has already been processed.
+
+    - Popular choices include RabbitMQ, ActiveMQ, and Kafka.  Public cloud vendors also provide products
+        that play this role.  For instance, AWS offeres SQS, SNS, and Kinesis as fully-managed solutions.
+
+
+
+- Kafka
+
+    - Kafka is worth highlighting due to its recent popularity.  This is due to helping move large volumes
+        of data around as part of implementing stream processing pipelines.  This can help in moving from
+        batch-oriented processing to more real-time processing.
+
+    - Kafka is built for very large scale.  It allows for large numbers of producers and consumers.
+
+    - One fairly unique feature is message permanence.  With normal brokers, once the last consumer has
+        received a message, the broker no longer needs to hold onto that message.  With Kafka, messages
+        can be stored for a configurable period.  This can allow consumers to reingest messages or allow
+        newly deployed consumers to process messages that were sent previously.
+
+    - Kafka has been rolling out support for stream processing.  Rather than using Kafka to send messages
+        to a dedicated stream processing tool like Apache Flink, some tasks can instead be done by Kafka
+        itself.  Using KSQL, you can define SQL-like statements that can process one or more topics on 
+        the fly.  This can give you something akin to a dynamically updating materialized DB view, with
+        the source of data being Kafka topics rather than a DB.
+
+    - To explore these ideas in more detail, check out 'Designing Event-Driven Systems' and 'Kafka: The
+        Definitive Guide'.
+
+
+
+- Serialization Formats
+
+    - Some technology choices (ie gRPC) make choices for you about serialization and deserialization.
+        Other technologies (ie Kafka) let you use a variety of formats.
+
+
+    - Textual Formats
+
+        - Using standard text formats give clients a lot of flexibility in how they consume resources.
+            REST APIs most often use a textual format for request and response bodies, even though you
+            could send binary data over HTTP.
+
+        - JSON has usurped XML as the text serialization format of choice.  It's simpler and smaller,
+            although the size difference rarely makes a huge difference once it is compressed.  JSON's
+            simplicity does have a cost, for instance it dropped schemas.
+
+        - Avro is a serialization format that takes JSON as an underlying structure and uses it to
+            define a schema-based format.  Avro has found a lot of popularity as a format for message
+            payloads, since it can send the schema as part of the payload, making supporting multiple
+            message formats much easier.
+
+        - XML does have its advantages.  For instance XPATH is a well-understood standard for extracting
+            parts of the payload.  JSONPath does exist, but is not widely supported.
+
+
+    - Binary Formats
+
+        - While textual formats are good for human interpretability and interoperability with different
+            tools, binary formats make for more compact payloads and better reading and writing 
+            performance.
+
+        - Protocol buffers is probably the most popular binary serialization format for microservice-based
+            communication.
+
+        - Many other formats (ie Simple Binary Encoding, Cap-n Proto, and FlatBuffers) have also been
+            developed.
