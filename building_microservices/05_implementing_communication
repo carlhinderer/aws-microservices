@@ -298,3 +298,172 @@
 
         - Many other formats (ie Simple Binary Encoding, Cap-n Proto, and FlatBuffers) have also been
             developed.
+
+
+
+- Schemas
+
+    - Picking a serialization format will typically define which schema technology you can use.  For
+        instance, if you use XML you get XSD.  For JSON, you get Json Schema.  SOAP uses WSDL.  gRPC uses
+        Protocol Buffers.  Many RPC technologies require explicit schemas in a specified format.
+
+    - Microservices requiring explicit schemas can make life easier for both producers and consumers,
+        reducing the amount of documentation required.
+
+    - Schemas can also help in terms of catching accidental breakage of microservice endpoints.  Broadly,
+        we can break contract breakages into 2 categories, 'structural breakages' and 'semantic breakages'.
+
+    - A structural breakage occurs when the structure of the endpoint changes in a way in which a
+        consumer becomes incompatible.  This includes fields or methods being removed, or new required
+        fields being added.
+
+    - A semantic breakage occurs when the structure of an endpoint remains the same, but the behavior
+        changes in such a way as to break consumers' expectations.
+
+    - Using schemas and comparing different versions can help you catch structural breakages, but catching
+        semantic breakages requires the use of testing.  This is similar to the concept of static vs
+        dynamic typing in PLs.
+
+    - Really, you always have a schema.  You just make a choice as to whether it is explicit.
+
+
+
+- Avoiding Breaking Changes
+
+    - To avoid making breaking changes, there are a few key ideas worth exploring.
+
+        - Expansion Changes = Add new things to a microservice interface, don't take things away
+
+        - Tolerant Reader = When consuming an interface, be tolerant in what you expect
+
+        - Right Technology = Pick a technology that makes backward-compatible changes easier
+
+        - Explicit Interface = Be explicit about what a service exposes
+
+        - Catch Accidental Breaking Changes Early = Have mechanisms in place to detect before deployment
+
+
+    - Expansion Changes
+
+        - As long as clients are tolerant, adding a new field to a payload shouldn't break things.
+
+
+    - Tolerant Reader
+
+        - When a client receives a response, it should pull out the fields it cares about and ignore the
+            rest.
+
+        - Some binding technology, specifically that used by strongly-typed languages, tries to bind all
+            fields whether the consumer wants them or not.  This can cause consumers to break needlessly.
+
+
+    - Right Technology
+
+        - At the simple end of the spectrum, Protocol Buffers uses the concept of a field number.  Each
+            entry has to define a field number, which the client expects to find.  If new fields are
+            added, the client doesn't care.
+
+        - Avro allows the schema to be sent along with the payload, allowing clients to interpret a payload
+            dynamically.
+
+        - A more complex example of allowing change would be REST endpoints with HATEOAS.
+
+
+    - Explicit Interface
+
+        - Having an explicit schema tells consumers what to expect, and also makes it clearer to producers
+            what should remain untouched to avoid breaking consumers.
+
+        - Explicit interfaces are often required for RPC, but not for REST.  This is changing with the
+            growth of OpenAPI and Json Schema.  Asynchronous messaging has historically lagged, but new
+            standards like AsyncAPI and CloudEvents are being adopted.
+
+
+    - Semantic Versioning
+
+        - Semantic Versioning allows clients to look at the version number of a service to know whether
+            it can integrate with it.  Each version number is in the form MAJOR.MINOR.PATCH.
+
+            MAJOR = Backwards-incompatible changes have been made
+            MINOR = New functionality has been added that should be backward compatible
+            PATCH = Bug fixes have been made to existing functionality
+
+
+    - Catch Accidental Breaking Changes Early
+
+        - There is tooling that can help pick up structural changes.  These tools will pass or fail based
+            on compatibility, allowing you to fail a CI build if imcompatible schemas are found.  For
+            instance:
+
+            - Protolock (for Protocol Buffers)
+            - json-schema-diff-validator (for Json Schema)
+            - openapi-diff (for OpenAPI)
+
+
+        - The open source Confluent Schema Registry supports Json Schema, Avro, and Protocol Buffers.  It
+            is capable of comparing newly uploaded versions for backward compatibility.  It was built for
+            the Kafka ecosystem, and needs Kafka to run, but can be used for non-Kafka communication.
+
+        - To catch semantic breakages, we need consumer-driven contract testing.  'Pact' is an example of
+            a tool used for this purpose.
+
+
+
+- Managing Breaking Changes
+
+    - If you realize that you do have to make a breaking change, you have 3 options:
+
+        1. Lockstep deployment = Deploy microservice and all consumers at the same time
+
+        2. Coexist incompatible versions = Run old and new versions of service side by side
+
+        3. Emulate the old interface = Expose the new interface and emulate the old interface
+
+
+    - Lockstep Deployment
+
+        - This breaks independent deployability, so it's best to avoid it if at all possible.
+
+
+    - Coexist Incompatible Versions
+
+        - One disadvantage is that if you need to fix a bug, you have to fix it in both places.
+
+        - You need logic that directs consumers to the correct service version.  This sometimes leads to
+            a bunch of hard-to-read nginx scripts that sit in middleware somewhere.
+
+        - Storing persistent state for our service may result in additional complexity.  Customers created
+            by both versions of the service still need to be stored in the DB.
+
+        - Coexisting concurrent versions for a short period of time may make a lot of sense.  For instance,
+            you may be using a canary release and coexisting versions for only a few minutes or hours.
+
+
+    - Emulate the Old Interface
+
+        - We could also coexist both the old and new interfaces in the same running service.  The easiest
+            way to do this is to have separate endpoints (ie v1, v2, v3).
+
+        - 
+
+
+
+
+
+
+- DRY and the Perils of Code Reuse in Microservices
+
+
+- Service Discovery
+
+
+- Service Meshes and API Gateways
+
+
+- API Gateways
+
+
+- Service Meshes
+
+
+- Documenting Services
